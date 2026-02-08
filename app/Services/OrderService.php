@@ -26,6 +26,13 @@ class OrderService
             foreach ($data['items'] as $item) {
                 $productSize = ProductSize::with('product')->findOrFail($item['product_size_id']);
 
+                // Check if product is available
+                if (!$productSize->product->is_available) {
+                    throw new \InvalidArgumentException(
+                        "Sorry, {$productSize->product->name} is currently unavailable. Please remove it from your cart and try again."
+                    );
+                }
+
                 // Calculate addon prices
                 $addonIds = $item['addon_ids'] ?? [];
                 $addonsTotal = 0;

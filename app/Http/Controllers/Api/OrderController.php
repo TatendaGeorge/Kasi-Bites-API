@@ -37,12 +37,18 @@ class OrderController extends Controller
 
         $data['user_id'] = $userId;
 
-        $order = $this->orderService->createOrder($data);
+        try {
+            $order = $this->orderService->createOrder($data);
 
-        return response()->json([
-            'message' => 'Order placed successfully',
-            'order' => new OrderResource($order),
-        ], 201);
+            return response()->json([
+                'message' => 'Order placed successfully',
+                'order' => new OrderResource($order),
+            ], 201);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 
     public function show(string $orderNumber): JsonResponse
