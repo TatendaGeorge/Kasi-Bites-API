@@ -66,7 +66,7 @@ class StoreController extends Controller
             'minimum_order_amount' => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        $store = $request->user()->store()->create($validated);
+        $store = $request->user()->store()->create($validated)->fresh();
 
         return response()->json([
             'message' => 'Store created successfully. It will be visible once approved.',
