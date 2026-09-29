@@ -12,6 +12,11 @@ class OrderResource extends JsonResource
         return [
             'id' => $this->id,
             'order_number' => $this->order_number,
+            'store' => $this->whenLoaded('store', fn () => [
+                'id' => $this->store->id,
+                'name' => $this->store->name,
+                'slug' => $this->store->slug,
+            ]),
             'customer_name' => $this->customer_name,
             'customer_phone' => $this->customer_phone,
             'delivery_address' => $this->delivery_address,

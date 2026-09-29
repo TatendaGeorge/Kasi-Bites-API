@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->statefulApi();
         $middleware->alias([
             'admin' => \App\Http\Middleware\IsAdmin::class,
+            'store.owner' => \App\Http\Middleware\EnsureOwnerHasStore::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

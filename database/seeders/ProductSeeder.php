@@ -4,12 +4,19 @@ namespace Database\Seeders;
 
 use App\Models\Product;
 use App\Models\ProductSize;
+use App\Models\Store;
 use Illuminate\Database\Seeder;
 
 class ProductSeeder extends Seeder
 {
     public function run(): void
     {
+        $store = Store::first();
+
+        if (!$store) {
+            return;
+        }
+
         $products = [
             [
                 'name' => 'Classic Fries',
@@ -67,7 +74,7 @@ class ProductSeeder extends Seeder
             $sizes = $productData['sizes'];
             unset($productData['sizes']);
 
-            $product = Product::create($productData);
+            $product = $store->products()->create($productData);
 
             foreach ($sizes as $sizeData) {
                 $product->sizes()->create($sizeData);

@@ -3,27 +3,30 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Order;
-use App\Models\User;
 use App\Enums\OrderStatus;
+use App\Traits\ResolvesCurrentStore;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
-    public function index(): JsonResponse
+    use ResolvesCurrentStore;
+
+    public function index(Request $request): JsonResponse
     {
+        $store = $this->currentStore($request);
         $today = Carbon::today();
 
-        $todaysOrders = Order::whereDate('created_at', $today)->count();
-        $todaysRevenue = Order::whereDate('created_at', $today)
+        $todaysOrders = $store->orders()->whereDate('created_at', $today)->count();
+        $todaysRevenue = $store->orders()->whereDate('created_at', $today)
             ->whereNot('status', OrderStatus::CANCELLED)
             ->sum('total');
-        $pendingOrders = Order::where('status', OrderStatus::PENDING)->count();
-        $totalUsers = User::count();
-        $totalOrders = Order::count();
+        $pendingOrders = $store->orders()->where('status', OrderStatus::PENDING)->count();
+        $totalCustomers = $store->orders()->whereNotNull('user_id')->distinct('user_id')->count('user_id');
+        $totalOrders = $store->orders()->count();
 
-        $recentOrders = Order::with(['user', 'items'])
+        $recentOrders = $store->orders()->with(['user', 'items'])
             ->latest()
             ->take(10)
             ->get()
@@ -44,7 +47,7 @@ class DashboardController extends Controller
                 'todays_orders' => $todaysOrders,
                 'todays_revenue' => number_format($todaysRevenue, 2),
                 'pending_orders' => $pendingOrders,
-                'total_users' => $totalUsers,
+                'total_users' => $totalCustomers,
                 'total_orders' => $totalOrders,
             ],
             'recent_orders' => $recentOrders,

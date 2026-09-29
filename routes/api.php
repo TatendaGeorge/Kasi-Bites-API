@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\WebPushController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\StoreController;
 use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\Admin\AdminOrderController;
 use App\Http\Controllers\Api\Admin\AdminUserController;
@@ -13,19 +14,18 @@ use App\Http\Controllers\Api\Admin\AdminProductController;
 use App\Http\Controllers\Api\Admin\ReportsController;
 use App\Http\Controllers\Api\Admin\CategoryController;
 use App\Http\Controllers\Api\Admin\AddonController;
-use App\Http\Controllers\Api\Admin\StoreSettingController;
+use App\Http\Controllers\Api\Admin\PlatformStoreController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Products (public)
-Route::get('/products', [ProductController::class, 'index']);
-Route::get('/products/{product}', [ProductController::class, 'show']);
-
-// Store settings (public - for checkout)
-Route::get('/store/settings', [App\Http\Controllers\Api\StoreController::class, 'settings']);
+// Store discovery (public)
+Route::get('/stores', [StoreController::class, 'index']);
+Route::get('/stores/{store:slug}', [StoreController::class, 'show']);
+Route::get('/stores/{store:slug}/products', [ProductController::class, 'index']);
+Route::get('/stores/{store:slug}/products/{product}', [ProductController::class, 'show']);
 
 // Orders - public endpoints
 Route::post('/orders', [OrderController::class, 'store']);
@@ -51,22 +51,22 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // User's orders
     Route::get('/orders', [OrderController::class, 'index']);
-
-    // Admin routes (update order status)
     Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus']);
+
+    // Store owner onboarding — creates the caller's one store
+    Route::post('/stores', [StoreController::class, 'store']);
 });
 
-// Admin API routes
-Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
+// Owner-facing admin API routes — implicitly scoped to $request->user()->store
+Route::middleware(['auth:sanctum', 'store.owner'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index']);
+
     Route::get('/orders', [AdminOrderController::class, 'index']);
     Route::get('/orders/active', [AdminOrderController::class, 'active']);
     Route::get('/orders/{order}', [AdminOrderController::class, 'show']);
     Route::patch('/orders/{order}', [AdminOrderController::class, 'update']);
     Route::patch('/orders/{order}/status', [AdminOrderController::class, 'updateStatus']);
-    Route::get('/users', [AdminUserController::class, 'index']);
-    Route::get('/users/{user}', [AdminUserController::class, 'show']);
-    Route::patch('/users/{user}', [AdminUserController::class, 'update']);
+
     // Products
     Route::get('/products', [AdminProductController::class, 'index']);
     Route::post('/products', [AdminProductController::class, 'store']);
@@ -92,10 +92,9 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::delete('/addons/{addon}', [AddonController::class, 'destroy']);
     Route::post('/addons/reorder', [AddonController::class, 'reorder']);
 
-    // Store Settings
-    Route::get('/settings', [StoreSettingController::class, 'index']);
-    Route::patch('/settings', [StoreSettingController::class, 'update']);
-    Route::get('/settings/{key}', [StoreSettingController::class, 'show']);
+    // My store profile
+    Route::get('/store', [StoreController::class, 'showMine']);
+    Route::patch('/store', [StoreController::class, 'updateMine']);
 
     // Reports & Financials
     Route::get('/reports/overview', [ReportsController::class, 'overview']);
@@ -104,4 +103,16 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::get('/reports/hourly-distribution', [ReportsController::class, 'hourlyDistribution']);
     Route::get('/reports/daily-distribution', [ReportsController::class, 'dailyDistribution']);
     Route::get('/reports/export', [ReportsController::class, 'export']);
+});
+
+// Platform-superadmin oversight routes — cross-store, gated on is_admin
+Route::middleware(['auth:sanctum', 'admin'])->prefix('admin/platform')->group(function () {
+    Route::get('/users', [AdminUserController::class, 'index']);
+    Route::get('/users/{user}', [AdminUserController::class, 'show']);
+    Route::patch('/users/{user}', [AdminUserController::class, 'update']);
+
+    Route::get('/stores', [PlatformStoreController::class, 'index']);
+    Route::get('/stores/{store}', [PlatformStoreController::class, 'show']);
+    Route::patch('/stores/{store}/approve', [PlatformStoreController::class, 'approve']);
+    Route::patch('/stores/{store}/suspend', [PlatformStoreController::class, 'suspend']);
 });

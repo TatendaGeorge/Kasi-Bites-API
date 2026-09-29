@@ -9,6 +9,7 @@ use App\Models\Addon;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ProductSize;
+use App\Models\Store;
 use Illuminate\Support\Facades\DB;
 
 class OrderService
@@ -20,6 +21,8 @@ class OrderService
     public function createOrder(array $data): Order
     {
         return DB::transaction(function () use ($data) {
+            $store = Store::findOrFail($data['store_id']);
+
             $subtotal = 0;
             $items = [];
 
@@ -65,12 +68,19 @@ class OrderService
                 ];
             }
 
+            if ($subtotal < $store->minimum_order_amount) {
+                throw new \InvalidArgumentException(
+                    "This store requires a minimum order of R" . number_format($store->minimum_order_amount, 2) . "."
+                );
+            }
+
             // No delivery fee for collection orders
             $orderType = $data['order_type'] ?? 'delivery';
-            $deliveryFee = $orderType === 'collection' ? 0 : config('app.delivery_fee', 30.00);
+            $deliveryFee = $orderType === 'collection' ? 0 : (float) $store->delivery_fee;
             $total = $subtotal + $deliveryFee;
 
             $order = Order::create([
+                'store_id' => $store->id,
                 'user_id' => $data['user_id'] ?? null,
                 'order_number' => Order::generateOrderNumber(),
                 'customer_name' => $data['customer_name'],
@@ -108,7 +118,7 @@ class OrderService
                 'estimated_delivery_at' => $this->deliveryTimeCalculator->calculate($order),
             ]);
 
-            $order->load(['items.addons', 'statusHistories']);
+            $order->load(['items.addons', 'statusHistories', 'store']);
 
             // Broadcast new order to admin dashboard
             event(new NewOrderPlaced($order));

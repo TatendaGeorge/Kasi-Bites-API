@@ -5,14 +5,17 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Traits\ResolvesCurrentStore;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AdminProductController extends Controller
 {
+    use ResolvesCurrentStore;
+
     public function index(Request $request): JsonResponse
     {
-        $query = Product::with(['sizes', 'category', 'addons']);
+        $query = $this->currentStore($request)->products()->with(['sizes', 'category', 'addons']);
 
         if ($request->has('search') && $request->search) {
             $query->where('name', 'like', "%{$request->search}%");
@@ -45,6 +48,8 @@ class AdminProductController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $store = $this->currentStore($request);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
@@ -52,15 +57,15 @@ class AdminProductController extends Controller
             'is_available' => 'boolean',
             'is_featured' => 'boolean',
             'sale_price' => 'nullable|numeric|min:0',
-            'category_id' => 'nullable|exists:categories,id',
+            'category_id' => ['nullable', 'exists:categories,id,store_id,' . $store->id],
             'sizes' => 'required|array|min:1',
             'sizes.*.size' => 'required|string|in:small,medium,large',
             'sizes.*.price' => 'required|numeric|min:0',
             'addon_ids' => 'nullable|array',
-            'addon_ids.*' => 'exists:addons,id',
+            'addon_ids.*' => 'exists:addons,id,store_id,' . $store->id,
         ]);
 
-        $product = Product::create([
+        $product = $store->products()->create([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'image_url' => $validated['image_url'] ?? null,
@@ -87,8 +92,10 @@ class AdminProductController extends Controller
         ], 201);
     }
 
-    public function show(Product $product): JsonResponse
+    public function show(Request $request, Product $product): JsonResponse
     {
+        $this->assertOwnedByCurrentStore($request, $product);
+
         return response()->json([
             'data' => new ProductResource($product->load(['sizes', 'category', 'addons'])),
         ]);
@@ -96,6 +103,9 @@ class AdminProductController extends Controller
 
     public function update(Request $request, Product $product): JsonResponse
     {
+        $this->assertOwnedByCurrentStore($request, $product);
+        $store = $this->currentStore($request);
+
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string|max:1000',
@@ -103,12 +113,12 @@ class AdminProductController extends Controller
             'is_available' => 'sometimes|boolean',
             'is_featured' => 'sometimes|boolean',
             'sale_price' => 'nullable|numeric|min:0',
-            'category_id' => 'nullable|exists:categories,id',
+            'category_id' => ['nullable', 'exists:categories,id,store_id,' . $store->id],
             'sizes' => 'sometimes|array|min:1',
             'sizes.*.size' => 'required_with:sizes|string|in:small,medium,large',
             'sizes.*.price' => 'required_with:sizes|numeric|min:0',
             'addon_ids' => 'nullable|array',
-            'addon_ids.*' => 'exists:addons,id',
+            'addon_ids.*' => 'exists:addons,id,store_id,' . $store->id,
         ]);
 
         $productData = collect($validated)->except(['sizes', 'addon_ids'])->toArray();
@@ -134,8 +144,10 @@ class AdminProductController extends Controller
         ]);
     }
 
-    public function destroy(Product $product): JsonResponse
+    public function destroy(Request $request, Product $product): JsonResponse
     {
+        $this->assertOwnedByCurrentStore($request, $product);
+
         $product->addons()->detach();
         $product->sizes()->delete();
         $product->delete();
@@ -145,8 +157,10 @@ class AdminProductController extends Controller
         ]);
     }
 
-    public function toggleAvailability(Product $product): JsonResponse
+    public function toggleAvailability(Request $request, Product $product): JsonResponse
     {
+        $this->assertOwnedByCurrentStore($request, $product);
+
         $product->update([
             'is_available' => !$product->is_available,
         ]);
@@ -157,8 +171,10 @@ class AdminProductController extends Controller
         ]);
     }
 
-    public function toggleFeatured(Product $product): JsonResponse
+    public function toggleFeatured(Request $request, Product $product): JsonResponse
     {
+        $this->assertOwnedByCurrentStore($request, $product);
+
         $product->update([
             'is_featured' => !$product->is_featured,
         ]);

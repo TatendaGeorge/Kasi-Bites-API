@@ -7,6 +7,7 @@ use App\Http\Resources\AdminOrderResource;
 use App\Models\Order;
 use App\Enums\OrderStatus;
 use App\Events\OrderStatusUpdated;
+use App\Traits\ResolvesCurrentStore;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -14,9 +15,11 @@ use Illuminate\Validation\Rule;
 
 class AdminOrderController extends Controller
 {
+    use ResolvesCurrentStore;
+
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Order::with(['user', 'items']);
+        $query = $this->currentStore($request)->orders()->with(['user', 'items']);
 
         // Filter by status
         if ($request->has('status') && $request->status !== 'all') {
@@ -49,9 +52,10 @@ class AdminOrderController extends Controller
     /**
      * Get today's active orders (not delivered or cancelled) for Kanban board
      */
-    public function active(): JsonResponse
+    public function active(Request $request): JsonResponse
     {
-        $orders = Order::with(['user', 'items'])
+        $orders = $this->currentStore($request)->orders()
+            ->with(['user', 'items'])
             ->whereDate('created_at', today())
             ->whereNotIn('status', [OrderStatus::DELIVERED, OrderStatus::CANCELLED])
             ->latest()
@@ -62,8 +66,9 @@ class AdminOrderController extends Controller
         ]);
     }
 
-    public function show(Order $order): AdminOrderResource
+    public function show(Request $request, Order $order): AdminOrderResource
     {
+        $this->assertOwnedByCurrentStore($request, $order);
         $order->load(['user', 'items', 'statusHistories']);
 
         return new AdminOrderResource($order);
@@ -71,6 +76,8 @@ class AdminOrderController extends Controller
 
     public function update(Request $request, Order $order): AdminOrderResource
     {
+        $this->assertOwnedByCurrentStore($request, $order);
+
         $validated = $request->validate([
             'customer_name' => 'sometimes|string|max:255',
             'customer_phone' => 'sometimes|string|max:20',
@@ -85,6 +92,8 @@ class AdminOrderController extends Controller
 
     public function updateStatus(Request $request, Order $order): JsonResponse
     {
+        $this->assertOwnedByCurrentStore($request, $order);
+
         $validated = $request->validate([
             'status' => ['required', Rule::enum(OrderStatus::class)],
             'notes' => 'nullable|string|max:500',

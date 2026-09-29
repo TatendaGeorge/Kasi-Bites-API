@@ -3,7 +3,8 @@
 namespace App\Http\Requests;
 
 use App\Enums\PaymentMethod;
-use App\Models\StoreSetting;
+use App\Models\ProductSize;
+use App\Models\Store;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -17,6 +18,7 @@ class StoreOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'store_id' => ['required', 'integer', 'exists:stores,id'],
             'customer_name' => ['required', 'string', 'max:255'],
             'customer_phone' => ['required', 'string', 'regex:/^(\+27|0)[6-8][0-9]{8}$/'],
             'order_type' => ['required', Rule::in(['delivery', 'collection'])],
@@ -36,29 +38,54 @@ class StoreOrderRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
+            if (!$this->store_id || $validator->errors()->has('store_id')) {
+                return;
+            }
+
+            $store = Store::find($this->store_id);
+
+            if (!$store) {
+                return;
+            }
+
+            // Every item's product must belong to the store the order is for —
+            // closes a gap where a stale/mixed cart could span two stores.
+            foreach ($this->input('items', []) as $index => $item) {
+                if (empty($item['product_size_id'])) {
+                    continue;
+                }
+
+                $productSize = ProductSize::with('product')->find($item['product_size_id']);
+
+                if ($productSize && $productSize->product->store_id !== $store->id) {
+                    $validator->errors()->add(
+                        "items.{$index}.product_size_id",
+                        'This item does not belong to the selected store.'
+                    );
+                }
+            }
+
             // Only validate distance for delivery orders with coordinates
             if ($this->order_type === 'delivery' &&
                 $this->delivery_latitude &&
-                $this->delivery_longitude) {
+                $this->delivery_longitude &&
+                $store->latitude &&
+                $store->longitude) {
 
-                $storeLat = StoreSetting::get('store_latitude');
-                $storeLng = StoreSetting::get('store_longitude');
-                $maxRadius = StoreSetting::get('delivery_radius_km', 0.5);
+                $maxRadius = (float) $store->delivery_radius_km;
 
-                if ($storeLat && $storeLng) {
-                    $distance = $this->calculateDistance(
-                        $storeLat,
-                        $storeLng,
-                        $this->delivery_latitude,
-                        $this->delivery_longitude
+                $distance = $this->calculateDistance(
+                    $store->latitude,
+                    $store->longitude,
+                    $this->delivery_latitude,
+                    $this->delivery_longitude
+                );
+
+                if ($distance > $maxRadius) {
+                    $validator->errors()->add(
+                        'delivery_address',
+                        "Sorry, this store only delivers within {$maxRadius}km. Your location is " . round($distance, 2) . "km away. Please choose collection instead."
                     );
-
-                    if ($distance > $maxRadius) {
-                        $validator->errors()->add(
-                            'delivery_address',
-                            "Sorry, we only deliver within {$maxRadius}km of our store. Your location is " . round($distance, 2) . "km away. Please choose collection instead."
-                        );
-                    }
                 }
             }
         });

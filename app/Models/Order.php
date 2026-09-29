@@ -14,6 +14,7 @@ class Order extends Model
     use HasFactory;
 
     protected $fillable = [
+        'store_id',
         'user_id',
         'order_number',
         'customer_name',
@@ -45,6 +46,11 @@ class Order extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function store(): BelongsTo
+    {
+        return $this->belongsTo(Store::class);
     }
 
     public function items(): HasMany

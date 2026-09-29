@@ -5,15 +5,19 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CategoryResource;
 use App\Models\Category;
+use App\Traits\ResolvesCurrentStore;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class CategoryController extends Controller
 {
+    use ResolvesCurrentStore;
+
     public function index(Request $request): JsonResponse
     {
-        $query = Category::withCount('products');
+        $query = $this->currentStore($request)->categories()->withCount('products');
 
         if ($request->has('active_only')) {
             $query->where('is_active', true);
@@ -28,9 +32,11 @@ class CategoryController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $store = $this->currentStore($request);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', 'max:255', 'unique:categories,slug'],
+            'slug' => ['nullable', 'string', 'max:255', Rule::unique('categories', 'slug')->where('store_id', $store->id)],
             'description' => ['nullable', 'string', 'max:1000'],
             'image_url' => ['nullable', 'string', 'max:500'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
@@ -41,7 +47,7 @@ class CategoryController extends Controller
             $validated['slug'] = Str::slug($validated['name']);
         }
 
-        $category = Category::create($validated);
+        $category = $store->categories()->create($validated);
 
         return response()->json([
             'message' => 'Category created successfully',
@@ -49,8 +55,9 @@ class CategoryController extends Controller
         ], 201);
     }
 
-    public function show(Category $category): JsonResponse
+    public function show(Request $request, Category $category): JsonResponse
     {
+        $this->assertOwnedByCurrentStore($request, $category);
         $category->loadCount('products');
 
         return response()->json([
@@ -60,9 +67,12 @@ class CategoryController extends Controller
 
     public function update(Request $request, Category $category): JsonResponse
     {
+        $this->assertOwnedByCurrentStore($request, $category);
+        $store = $this->currentStore($request);
+
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
-            'slug' => ['sometimes', 'string', 'max:255', 'unique:categories,slug,' . $category->id],
+            'slug' => ['sometimes', 'string', 'max:255', Rule::unique('categories', 'slug')->where('store_id', $store->id)->ignore($category->id)],
             'description' => ['nullable', 'string', 'max:1000'],
             'image_url' => ['nullable', 'string', 'max:500'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
@@ -77,9 +87,10 @@ class CategoryController extends Controller
         ]);
     }
 
-    public function destroy(Category $category): JsonResponse
+    public function destroy(Request $request, Category $category): JsonResponse
     {
-        // Check if category has products
+        $this->assertOwnedByCurrentStore($request, $category);
+
         if ($category->products()->exists()) {
             return response()->json([
                 'message' => 'Cannot delete category with existing products. Please reassign or delete the products first.',
@@ -95,14 +106,16 @@ class CategoryController extends Controller
 
     public function reorder(Request $request): JsonResponse
     {
+        $store = $this->currentStore($request);
+
         $validated = $request->validate([
             'categories' => ['required', 'array'],
-            'categories.*.id' => ['required', 'exists:categories,id'],
+            'categories.*.id' => ['required', 'exists:categories,id,store_id,' . $store->id],
             'categories.*.sort_order' => ['required', 'integer', 'min:0'],
         ]);
 
         foreach ($validated['categories'] as $item) {
-            Category::where('id', $item['id'])->update(['sort_order' => $item['sort_order']]);
+            $store->categories()->where('id', $item['id'])->update(['sort_order' => $item['sort_order']]);
         }
 
         return response()->json([

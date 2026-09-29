@@ -18,6 +18,7 @@ class UserResource extends JsonResource
             'default_address_latitude' => $this->default_address_latitude,
             'default_address_longitude' => $this->default_address_longitude,
             'is_admin' => $this->is_admin,
+            'store' => new StoreResource($this->whenLoaded('store')),
             'created_at' => $this->created_at,
         ];
     }

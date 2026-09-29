@@ -13,6 +13,7 @@ class Product extends Model
     use HasFactory;
 
     protected $fillable = [
+        'store_id',
         'category_id',
         'name',
         'description',
@@ -27,6 +28,11 @@ class Product extends Model
         'is_featured' => 'boolean',
         'sale_price' => 'decimal:2',
     ];
+
+    public function store(): BelongsTo
+    {
+        return $this->belongsTo(Store::class);
+    }
 
     public function category(): BelongsTo
     {

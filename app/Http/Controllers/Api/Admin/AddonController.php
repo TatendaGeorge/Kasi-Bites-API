@@ -5,14 +5,17 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AddonResource;
 use App\Models\Addon;
+use App\Traits\ResolvesCurrentStore;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AddonController extends Controller
 {
+    use ResolvesCurrentStore;
+
     public function index(Request $request): JsonResponse
     {
-        $query = Addon::withCount('products');
+        $query = $this->currentStore($request)->addons()->withCount('products');
 
         if ($request->has('available_only')) {
             $query->where('is_available', true);
@@ -35,7 +38,7 @@ class AddonController extends Controller
             'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $addon = Addon::create($validated);
+        $addon = $this->currentStore($request)->addons()->create($validated);
 
         return response()->json([
             'message' => 'Add-on created successfully',
@@ -43,8 +46,9 @@ class AddonController extends Controller
         ], 201);
     }
 
-    public function show(Addon $addon): JsonResponse
+    public function show(Request $request, Addon $addon): JsonResponse
     {
+        $this->assertOwnedByCurrentStore($request, $addon);
         $addon->loadCount('products');
 
         return response()->json([
@@ -54,6 +58,8 @@ class AddonController extends Controller
 
     public function update(Request $request, Addon $addon): JsonResponse
     {
+        $this->assertOwnedByCurrentStore($request, $addon);
+
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
@@ -70,8 +76,9 @@ class AddonController extends Controller
         ]);
     }
 
-    public function destroy(Addon $addon): JsonResponse
+    public function destroy(Request $request, Addon $addon): JsonResponse
     {
+        $this->assertOwnedByCurrentStore($request, $addon);
         $addon->delete();
 
         return response()->json([
@@ -81,14 +88,16 @@ class AddonController extends Controller
 
     public function reorder(Request $request): JsonResponse
     {
+        $store = $this->currentStore($request);
+
         $validated = $request->validate([
             'addons' => ['required', 'array'],
-            'addons.*.id' => ['required', 'exists:addons,id'],
+            'addons.*.id' => ['required', 'exists:addons,id,store_id,' . $store->id],
             'addons.*.sort_order' => ['required', 'integer', 'min:0'],
         ]);
 
         foreach ($validated['addons'] as $item) {
-            Addon::where('id', $item['id'])->update(['sort_order' => $item['sort_order']]);
+            $store->addons()->where('id', $item['id'])->update(['sort_order' => $item['sort_order']]);
         }
 
         return response()->json([

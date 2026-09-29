@@ -5,21 +5,24 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Store;
 use App\Enums\OrderStatus;
-use App\Enums\PaymentMethod;
+use App\Traits\ResolvesCurrentStore;
 use Carbon\Carbon;
-use Carbon\CarbonPeriod;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ReportsController extends Controller
 {
+    use ResolvesCurrentStore;
+
     /**
      * Get financial overview with revenue metrics
      */
     public function overview(Request $request): JsonResponse
     {
+        $store = $this->currentStore($request);
         $period = $request->input('period', 'today'); // today, week, month, year, custom
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
@@ -27,7 +30,7 @@ class ReportsController extends Controller
         [$from, $to] = $this->getDateRange($period, $startDate, $endDate);
 
         // Revenue metrics (excluding cancelled orders)
-        $revenueQuery = Order::whereBetween('created_at', [$from, $to])
+        $revenueQuery = $this->storeOrders($store)->whereBetween('created_at', [$from, $to])
             ->whereNot('status', OrderStatus::CANCELLED);
 
         $totalRevenue = (clone $revenueQuery)->sum('total');
@@ -37,14 +40,14 @@ class ReportsController extends Controller
         $netRevenue = $totalRevenue - $totalDeliveryFees;
 
         // Order counts by status
-        $ordersByStatus = Order::whereBetween('created_at', [$from, $to])
+        $ordersByStatus = $this->storeOrders($store)->whereBetween('created_at', [$from, $to])
             ->select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
             ->pluck('count', 'status')
             ->toArray();
 
         // Payment method breakdown
-        $paymentBreakdown = Order::whereBetween('created_at', [$from, $to])
+        $paymentBreakdown = $this->storeOrders($store)->whereBetween('created_at', [$from, $to])
             ->whereNot('status', OrderStatus::CANCELLED)
             ->select('payment_method', DB::raw('count(*) as count'), DB::raw('sum(total) as total'))
             ->groupBy('payment_method')
@@ -56,7 +59,7 @@ class ReportsController extends Controller
         $prevFrom = (clone $from)->subDays($periodDiff);
         $prevTo = (clone $to)->subDays($periodDiff);
 
-        $prevRevenue = Order::whereBetween('created_at', [$prevFrom, $prevTo])
+        $prevRevenue = $this->storeOrders($store)->whereBetween('created_at', [$prevFrom, $prevTo])
             ->whereNot('status', OrderStatus::CANCELLED)
             ->sum('total');
 
@@ -64,7 +67,7 @@ class ReportsController extends Controller
             ? (($totalRevenue - $prevRevenue) / $prevRevenue) * 100
             : ($totalRevenue > 0 ? 100 : 0);
 
-        $prevOrders = Order::whereBetween('created_at', [$prevFrom, $prevTo])
+        $prevOrders = $this->storeOrders($store)->whereBetween('created_at', [$prevFrom, $prevTo])
             ->whereNot('status', OrderStatus::CANCELLED)
             ->count();
 
@@ -106,6 +109,7 @@ class ReportsController extends Controller
      */
     public function revenueChart(Request $request): JsonResponse
     {
+        $store = $this->currentStore($request);
         $period = $request->input('period', 'week');
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
@@ -127,7 +131,7 @@ class ReportsController extends Controller
             }
         }
 
-        $data = $this->getGroupedRevenue($from, $to, $groupBy);
+        $data = $this->getGroupedRevenue($store, $from, $to, $groupBy);
 
         return response()->json([
             'period' => [
@@ -144,6 +148,7 @@ class ReportsController extends Controller
      */
     public function topProducts(Request $request): JsonResponse
     {
+        $store = $this->currentStore($request);
         $period = $request->input('period', 'month');
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
@@ -151,7 +156,7 @@ class ReportsController extends Controller
 
         [$from, $to] = $this->getDateRange($period, $startDate, $endDate);
 
-        $topProducts = OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
+        $topProducts = $this->storeOrderItems($store)
             ->whereBetween('orders.created_at', [$from, $to])
             ->whereNot('orders.status', OrderStatus::CANCELLED)
             ->select(
@@ -186,13 +191,14 @@ class ReportsController extends Controller
      */
     public function hourlyDistribution(Request $request): JsonResponse
     {
+        $store = $this->currentStore($request);
         $period = $request->input('period', 'month');
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
 
         [$from, $to] = $this->getDateRange($period, $startDate, $endDate);
 
-        $hourlyData = Order::whereBetween('created_at', [$from, $to])
+        $hourlyData = $this->storeOrders($store)->whereBetween('created_at', [$from, $to])
             ->whereNot('status', OrderStatus::CANCELLED)
             ->select(
                 DB::raw('HOUR(created_at) as hour'),
@@ -232,6 +238,7 @@ class ReportsController extends Controller
      */
     public function dailyDistribution(Request $request): JsonResponse
     {
+        $store = $this->currentStore($request);
         $period = $request->input('period', 'month');
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
@@ -240,7 +247,7 @@ class ReportsController extends Controller
 
         $dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-        $dailyData = Order::whereBetween('created_at', [$from, $to])
+        $dailyData = $this->storeOrders($store)->whereBetween('created_at', [$from, $to])
             ->whereNot('status', OrderStatus::CANCELLED)
             ->select(
                 DB::raw('DAYOFWEEK(created_at) as day_num'),
@@ -281,6 +288,7 @@ class ReportsController extends Controller
      */
     public function export(Request $request): JsonResponse
     {
+        $store = $this->currentStore($request);
         $period = $request->input('period', 'month');
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
@@ -289,9 +297,9 @@ class ReportsController extends Controller
         [$from, $to] = $this->getDateRange($period, $startDate, $endDate);
 
         $data = match ($type) {
-            'orders' => $this->getOrdersExportData($from, $to),
-            'products' => $this->getProductsExportData($from, $to),
-            'summary' => $this->getSummaryExportData($from, $to),
+            'orders' => $this->getOrdersExportData($store, $from, $to),
+            'products' => $this->getProductsExportData($store, $from, $to),
+            'summary' => $this->getSummaryExportData($store, $from, $to),
             default => [],
         };
 
@@ -303,6 +311,23 @@ class ReportsController extends Controller
             ],
             'data' => $data,
         ]);
+    }
+
+    /**
+     * Helper: this store's orders, as a fresh query builder each call
+     */
+    private function storeOrders(Store $store)
+    {
+        return Order::where('store_id', $store->id);
+    }
+
+    /**
+     * Helper: this store's order items, joined to orders, as a fresh query builder each call
+     */
+    private function storeOrderItems(Store $store)
+    {
+        return OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->where('orders.store_id', $store->id);
     }
 
     /**
@@ -362,7 +387,7 @@ class ReportsController extends Controller
     /**
      * Helper: Get grouped revenue data for charts
      */
-    private function getGroupedRevenue(Carbon $from, Carbon $to, string $groupBy): array
+    private function getGroupedRevenue(Store $store, Carbon $from, Carbon $to, string $groupBy): array
     {
         $format = match ($groupBy) {
             'hour' => '%Y-%m-%d %H:00',
@@ -372,7 +397,7 @@ class ReportsController extends Controller
             default => '%Y-%m-%d',
         };
 
-        $data = Order::whereBetween('created_at', [$from, $to])
+        $data = $this->storeOrders($store)->whereBetween('created_at', [$from, $to])
             ->whereNot('status', OrderStatus::CANCELLED)
             ->select(
                 DB::raw("DATE_FORMAT(created_at, '{$format}') as period"),
@@ -429,9 +454,9 @@ class ReportsController extends Controller
     /**
      * Helper: Get orders export data
      */
-    private function getOrdersExportData(Carbon $from, Carbon $to): array
+    private function getOrdersExportData(Store $store, Carbon $from, Carbon $to): array
     {
-        return Order::with('items')
+        return $this->storeOrders($store)->with('items')
             ->whereBetween('created_at', [$from, $to])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -453,9 +478,9 @@ class ReportsController extends Controller
     /**
      * Helper: Get products export data
      */
-    private function getProductsExportData(Carbon $from, Carbon $to): array
+    private function getProductsExportData(Store $store, Carbon $from, Carbon $to): array
     {
-        return OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
+        return $this->storeOrderItems($store)
             ->whereBetween('orders.created_at', [$from, $to])
             ->whereNot('orders.status', OrderStatus::CANCELLED)
             ->select(
@@ -474,9 +499,9 @@ class ReportsController extends Controller
     /**
      * Helper: Get summary export data
      */
-    private function getSummaryExportData(Carbon $from, Carbon $to): array
+    private function getSummaryExportData(Store $store, Carbon $from, Carbon $to): array
     {
-        $revenueQuery = Order::whereBetween('created_at', [$from, $to])
+        $revenueQuery = $this->storeOrders($store)->whereBetween('created_at', [$from, $to])
             ->whereNot('status', OrderStatus::CANCELLED);
 
         return [
@@ -488,7 +513,7 @@ class ReportsController extends Controller
             'total_orders' => (clone $revenueQuery)->count(),
             'avg_order_value' => round((clone $revenueQuery)->avg('total') ?? 0, 2),
             'total_delivery_fees' => round((clone $revenueQuery)->sum('delivery_fee'), 2),
-            'cancelled_orders' => Order::whereBetween('created_at', [$from, $to])
+            'cancelled_orders' => $this->storeOrders($store)->whereBetween('created_at', [$from, $to])
                 ->where('status', OrderStatus::CANCELLED)
                 ->count(),
         ];

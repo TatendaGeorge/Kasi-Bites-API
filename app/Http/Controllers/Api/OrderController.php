@@ -53,7 +53,7 @@ class OrderController extends Controller
 
     public function show(string $orderNumber): JsonResponse
     {
-        $order = Order::with(['items.addons', 'statusHistories'])
+        $order = Order::with(['items.addons', 'statusHistories', 'store'])
             ->where('order_number', $orderNumber)
             ->firstOrFail();
 
@@ -68,7 +68,7 @@ class OrderController extends Controller
 
         $orders = $request->user()
             ->orders()
-            ->with(['items.addons', 'statusHistories'])
+            ->with(['items.addons', 'statusHistories', 'store'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 

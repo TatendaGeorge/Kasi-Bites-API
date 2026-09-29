@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Addon extends Model
@@ -11,6 +12,7 @@ class Addon extends Model
     use HasFactory;
 
     protected $fillable = [
+        'store_id',
         'name',
         'description',
         'price',
@@ -27,5 +29,10 @@ class Addon extends Model
     public function products(): BelongsToMany
     {
         return $this->belongsToMany(Product::class, 'product_addon')->withTimestamps();
+    }
+
+    public function store(): BelongsTo
+    {
+        return $this->belongsTo(Store::class);
     }
 }

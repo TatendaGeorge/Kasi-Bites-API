@@ -11,6 +11,7 @@ class AddonResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'store_id' => $this->store_id,
             'name' => $this->name,
             'description' => $this->description,
             'price' => (float) $this->price,
