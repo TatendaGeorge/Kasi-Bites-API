@@ -19,11 +19,25 @@ const cluster = import.meta.env.VITE_PUSHER_APP_CLUSTER;
 
 console.log('Pusher config:', { key, cluster });
 
-const echo = new Echo({
-  broadcaster: 'pusher',
-  key: key,
-  cluster: cluster,
-  forceTLS: true,
-});
+// Pusher throws synchronously if no key is configured, which would crash the
+// whole app before it can render. Real-time notifications are optional, so
+// fall back to a no-op stub until VITE_PUSHER_APP_KEY is actually set.
+const noopChannel = {
+  subscribed: () => noopChannel,
+  error: () => noopChannel,
+  listen: () => noopChannel,
+};
+
+const echo = key
+  ? new Echo({
+      broadcaster: 'pusher',
+      key: key,
+      cluster: cluster,
+      forceTLS: true,
+    })
+  : ({
+      channel: () => noopChannel,
+      leave: () => {},
+    } as unknown as Echo);
 
 export default echo;
