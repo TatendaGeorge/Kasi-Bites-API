@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { settingsApi } from '../api/client';
-import { StoreSetting } from '../types';
-import { Save, Clock, DollarSign, MapPin, Store, Power } from 'lucide-react';
+import { storesApi } from '../api/client';
+import { Store } from '../types';
+import { Save, Clock, DollarSign, MapPin, Store as StoreIcon, Power } from 'lucide-react';
 
 interface OperatingHours {
   [day: string]: {
@@ -13,16 +13,16 @@ interface OperatingHours {
 }
 
 interface SettingsFormData {
-  store_name: string;
-  store_address: string;
-  store_phone: string;
-  store_email: string;
-  store_latitude: number | string;
-  store_longitude: number | string;
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  latitude: number | string;
+  longitude: number | string;
   delivery_fee: number | string;
   minimum_order_amount: number | string;
   delivery_radius_km: number | string;
-  is_store_open: boolean;
+  is_open: boolean;
   operating_hours: OperatingHours;
 }
 
@@ -41,68 +41,60 @@ const DEFAULT_OPERATING_HOURS: OperatingHours = {
 export default function StoreSettings() {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<SettingsFormData>({
-    store_name: '',
-    store_address: '',
-    store_phone: '',
-    store_email: '',
-    store_latitude: '',
-    store_longitude: '',
+    name: '',
+    address: '',
+    phone: '',
+    email: '',
+    latitude: '',
+    longitude: '',
     delivery_fee: '',
     minimum_order_amount: '',
     delivery_radius_km: '',
-    is_store_open: true,
+    is_open: true,
     operating_hours: DEFAULT_OPERATING_HOURS,
   });
   const [hasChanges, setHasChanges] = useState(false);
 
-  const { data: settings, isLoading } = useQuery<{ data: StoreSetting[] }>({
-    queryKey: ['settings'],
-    queryFn: () => settingsApi.getAll(),
+  const { data: store, isLoading } = useQuery<{ data: Store }>({
+    queryKey: ['my-store'],
+    queryFn: () => storesApi.getMine(),
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: Record<string, string | number | boolean | null>) =>
-      settingsApi.update(data),
+    mutationFn: (data: Record<string, unknown>) => storesApi.updateMine(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['settings'] });
+      queryClient.invalidateQueries({ queryKey: ['my-store'] });
       setHasChanges(false);
     },
   });
 
-  // Initialize form data when settings load
+  // Initialize form data when the store loads
   useEffect(() => {
-    if (settings?.data) {
-      const newFormData: Partial<SettingsFormData> = {};
-
-      settings.data.forEach((setting) => {
-        const key = setting.key as keyof SettingsFormData;
-
-        if (setting.key === 'is_store_open') {
-          newFormData[key] = setting.value === 'true' || setting.value === '1';
-        } else if (setting.key === 'operating_hours') {
-          try {
-            newFormData[key] = setting.value ? JSON.parse(setting.value) : DEFAULT_OPERATING_HOURS;
-          } catch {
-            newFormData[key] = DEFAULT_OPERATING_HOURS;
-          }
-        } else if (['delivery_fee', 'minimum_order_amount', 'delivery_radius_km', 'store_latitude', 'store_longitude'].includes(setting.key)) {
-          newFormData[key] = setting.value ? parseFloat(setting.value) : '';
-        } else {
-          (newFormData as Record<string, string>)[key] = setting.value || '';
-        }
+    if (store?.data) {
+      const s = store.data;
+      setFormData({
+        name: s.name || '',
+        address: s.address || '',
+        phone: s.phone || '',
+        email: s.email || '',
+        latitude: s.latitude ?? '',
+        longitude: s.longitude ?? '',
+        delivery_fee: s.delivery_fee ?? '',
+        minimum_order_amount: s.minimum_order_amount ?? '',
+        delivery_radius_km: s.delivery_radius_km ?? '',
+        is_open: s.is_open,
+        operating_hours: (s.operating_hours as OperatingHours) || DEFAULT_OPERATING_HOURS,
       });
-
-      setFormData(prev => ({ ...prev, ...newFormData }));
     }
-  }, [settings]);
+  }, [store]);
 
   const handleChange = (key: keyof SettingsFormData, value: string | boolean | number) => {
-    setFormData(prev => ({ ...prev, [key]: value }));
+    setFormData((prev) => ({ ...prev, [key]: value }));
     setHasChanges(true);
   };
 
   const handleOperatingHoursChange = (day: string, field: 'open' | 'close' | 'is_open', value: string | boolean) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       operating_hours: {
         ...prev.operating_hours,
@@ -118,18 +110,18 @@ export default function StoreSettings() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const submitData: Record<string, string | number | boolean | null> = {
-      store_name: formData.store_name || null,
-      store_address: formData.store_address || null,
-      store_phone: formData.store_phone || null,
-      store_email: formData.store_email || null,
-      store_latitude: formData.store_latitude === '' ? null : Number(formData.store_latitude),
-      store_longitude: formData.store_longitude === '' ? null : Number(formData.store_longitude),
-      delivery_fee: formData.delivery_fee === '' ? null : Number(formData.delivery_fee),
-      minimum_order_amount: formData.minimum_order_amount === '' ? null : Number(formData.minimum_order_amount),
-      delivery_radius_km: formData.delivery_radius_km === '' ? null : Number(formData.delivery_radius_km),
-      is_store_open: formData.is_store_open,
-      operating_hours: formData.operating_hours as unknown as Record<string, string | number | boolean | null>,
+    const submitData: Record<string, unknown> = {
+      name: formData.name || undefined,
+      address: formData.address || null,
+      phone: formData.phone || null,
+      email: formData.email || null,
+      latitude: formData.latitude === '' ? null : Number(formData.latitude),
+      longitude: formData.longitude === '' ? null : Number(formData.longitude),
+      delivery_fee: formData.delivery_fee === '' ? undefined : Number(formData.delivery_fee),
+      minimum_order_amount: formData.minimum_order_amount === '' ? undefined : Number(formData.minimum_order_amount),
+      delivery_radius_km: formData.delivery_radius_km === '' ? undefined : Number(formData.delivery_radius_km),
+      is_open: formData.is_open,
+      operating_hours: formData.operating_hours,
     };
 
     updateMutation.mutate(submitData);
@@ -161,6 +153,12 @@ export default function StoreSettings() {
           </button>
         )}
       </div>
+
+      {store?.data && !store.data.is_active && (
+        <div className="p-4 bg-amber-50 text-amber-800 rounded-lg">
+          Your store is pending approval from the Kasi Bites team. Customers won't see it until it's approved.
+        </div>
+      )}
 
       {updateMutation.isSuccess && (
         <div className="p-4 bg-green-50 text-green-700 rounded-lg">
@@ -195,13 +193,13 @@ export default function StoreSettings() {
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={formData.is_store_open}
-                  onChange={(e) => handleChange('is_store_open', e.target.checked)}
+                  checked={formData.is_open}
+                  onChange={(e) => handleChange('is_open', e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500"></div>
-                <span className={`ml-3 text-sm font-medium ${formData.is_store_open ? 'text-green-600' : 'text-red-600'}`}>
-                  {formData.is_store_open ? 'Open' : 'Closed'}
+                <span className={`ml-3 text-sm font-medium ${formData.is_open ? 'text-green-600' : 'text-red-600'}`}>
+                  {formData.is_open ? 'Open' : 'Closed'}
                 </span>
               </label>
             </div>
@@ -212,7 +210,7 @@ export default function StoreSettings() {
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <div className="flex items-center gap-3">
-              <Store className="h-5 w-5 text-gray-500" />
+              <StoreIcon className="h-5 w-5 text-gray-500" />
               <div>
                 <h2 className="font-semibold text-gray-900">Store Information</h2>
                 <p className="text-sm text-gray-500">Basic store details visible to customers</p>
@@ -226,8 +224,8 @@ export default function StoreSettings() {
               </label>
               <input
                 type="text"
-                value={formData.store_name}
-                onChange={(e) => handleChange('store_name', e.target.value)}
+                value={formData.name}
+                onChange={(e) => handleChange('name', e.target.value)}
                 placeholder="e.g., Kasi Bites"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
@@ -238,8 +236,8 @@ export default function StoreSettings() {
               </label>
               <input
                 type="tel"
-                value={formData.store_phone}
-                onChange={(e) => handleChange('store_phone', e.target.value)}
+                value={formData.phone}
+                onChange={(e) => handleChange('phone', e.target.value)}
                 placeholder="e.g., 012 345 6789"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
@@ -250,8 +248,8 @@ export default function StoreSettings() {
               </label>
               <input
                 type="email"
-                value={formData.store_email}
-                onChange={(e) => handleChange('store_email', e.target.value)}
+                value={formData.email}
+                onChange={(e) => handleChange('email', e.target.value)}
                 placeholder="e.g., hello@kasibites.co.za"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
@@ -261,8 +259,8 @@ export default function StoreSettings() {
                 Store Address
               </label>
               <textarea
-                value={formData.store_address}
-                onChange={(e) => handleChange('store_address', e.target.value)}
+                value={formData.address}
+                onChange={(e) => handleChange('address', e.target.value)}
                 placeholder="e.g., 123 Main Road, Soweto, Johannesburg"
                 rows={2}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -331,7 +329,7 @@ export default function StoreSettings() {
                     min="0"
                     value={formData.delivery_radius_km}
                     onChange={(e) => handleChange('delivery_radius_km', e.target.value ? parseFloat(e.target.value) : '')}
-                    placeholder="0.5"
+                    placeholder="5"
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
@@ -353,8 +351,8 @@ export default function StoreSettings() {
                   <input
                     type="number"
                     step="0.000001"
-                    value={formData.store_latitude}
-                    onChange={(e) => handleChange('store_latitude', e.target.value ? parseFloat(e.target.value) : '')}
+                    value={formData.latitude}
+                    onChange={(e) => handleChange('latitude', e.target.value ? parseFloat(e.target.value) : '')}
                     placeholder="-33.011664"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
@@ -366,16 +364,16 @@ export default function StoreSettings() {
                   <input
                     type="number"
                     step="0.000001"
-                    value={formData.store_longitude}
-                    onChange={(e) => handleChange('store_longitude', e.target.value ? parseFloat(e.target.value) : '')}
+                    value={formData.longitude}
+                    onChange={(e) => handleChange('longitude', e.target.value ? parseFloat(e.target.value) : '')}
                     placeholder="27.866664"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
               </div>
-              {formData.store_latitude && formData.store_longitude && (
+              {formData.latitude && formData.longitude && (
                 <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${formData.store_latitude},${formData.store_longitude}`}
+                  href={`https://www.google.com/maps/search/?api=1&query=${formData.latitude},${formData.longitude}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 mt-3 text-sm text-blue-600 hover:underline"

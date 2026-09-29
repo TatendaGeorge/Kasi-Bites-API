@@ -35,6 +35,16 @@ export default apiClient;
 
 // Auth API
 export const authApi = {
+  register: async (name: string, email: string, phone: string, password: string) => {
+    const response = await apiClient.post('/register', {
+      name,
+      email,
+      phone,
+      password,
+      password_confirmation: password,
+    });
+    return response.data;
+  },
   login: async (email: string, password: string) => {
     const response = await apiClient.post('/login', { email, password });
     return response.data;
@@ -45,6 +55,51 @@ export const authApi = {
   },
   getUser: async () => {
     const response = await apiClient.get('/user');
+    return response.data;
+  },
+};
+
+// Store owner onboarding + self-service store profile
+export const storesApi = {
+  create: async (data: {
+    name: string;
+    description?: string;
+    address?: string;
+    phone?: string;
+    email?: string;
+    delivery_fee?: number;
+    delivery_radius_km?: number;
+    minimum_order_amount?: number;
+  }) => {
+    const response = await apiClient.post('/stores', data);
+    return response.data;
+  },
+  getMine: async () => {
+    const response = await apiClient.get('/admin/store');
+    return response.data;
+  },
+  updateMine: async (data: Record<string, unknown>) => {
+    const response = await apiClient.patch('/admin/store', data);
+    return response.data;
+  },
+};
+
+// Platform-superadmin: cross-store oversight
+export const platformStoresApi = {
+  getAll: async (params?: { is_active?: boolean; search?: string; page?: number; per_page?: number }) => {
+    const response = await apiClient.get('/admin/platform/stores', { params });
+    return response.data;
+  },
+  getOne: async (slug: string) => {
+    const response = await apiClient.get(`/admin/platform/stores/${slug}`);
+    return response.data;
+  },
+  approve: async (slug: string) => {
+    const response = await apiClient.patch(`/admin/platform/stores/${slug}/approve`);
+    return response.data;
+  },
+  suspend: async (slug: string) => {
+    const response = await apiClient.patch(`/admin/platform/stores/${slug}/suspend`);
     return response.data;
   },
 };
@@ -102,11 +157,11 @@ export const usersApi = {
     page?: number;
     per_page?: number;
   }) => {
-    const response = await apiClient.get('/admin/users', { params });
+    const response = await apiClient.get('/admin/platform/users', { params });
     return response.data;
   },
   getOne: async (id: number) => {
-    const response = await apiClient.get(`/admin/users/${id}`);
+    const response = await apiClient.get(`/admin/platform/users/${id}`);
     return response.data;
   },
   update: async (id: number, data: Partial<{
@@ -115,7 +170,7 @@ export const usersApi = {
     phone: string;
     is_admin: boolean;
   }>) => {
-    const response = await apiClient.patch(`/admin/users/${id}`, data);
+    const response = await apiClient.patch(`/admin/platform/users/${id}`, data);
     return response.data;
   },
 };
@@ -259,22 +314,6 @@ export const addonsApi = {
   },
   reorder: async (order: number[]) => {
     const response = await apiClient.post('/admin/addons/reorder', { order });
-    return response.data;
-  },
-};
-
-// Admin Store Settings API
-export const settingsApi = {
-  getAll: async () => {
-    const response = await apiClient.get('/admin/settings');
-    return response.data;
-  },
-  getOne: async (key: string) => {
-    const response = await apiClient.get(`/admin/settings/${key}`);
-    return response.data;
-  },
-  update: async (settings: Record<string, string | number | boolean | null>) => {
-    const response = await apiClient.patch('/admin/settings', { settings });
     return response.data;
   },
 };

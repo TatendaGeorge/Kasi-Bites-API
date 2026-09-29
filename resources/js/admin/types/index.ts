@@ -7,12 +7,43 @@ export type OrderStatus =
   | 'delivered'
   | 'cancelled';
 
+export interface Store {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  logo_url: string | null;
+  cover_image_url: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  delivery_fee: number;
+  delivery_radius_km: number;
+  minimum_order_amount: number;
+  operating_hours: Record<string, { open: string; close: string; is_open: boolean }> | null;
+  is_open: boolean;
+  is_active: boolean;
+  products_count?: number;
+  orders_count?: number;
+  owner?: {
+    id: number;
+    name: string;
+    email: string;
+    phone: string | null;
+  };
+  created_at: string;
+  updated_at: string;
+}
+
 export interface User {
   id: number;
   name: string;
   email: string;
   phone: string | null;
   is_admin: boolean;
+  store: Store | null;
   orders_count?: number;
   created_at: string;
   updated_at: string;
@@ -107,18 +138,9 @@ export interface Addon {
   updated_at: string;
 }
 
-export interface StoreSetting {
-  id: number;
-  key: string;
-  value: string | null;
-  type: 'string' | 'boolean' | 'integer' | 'decimal' | 'json';
-  description: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface Product {
   id: number;
+  store_id: number;
   name: string;
   description: string | null;
   image_url: string | null;

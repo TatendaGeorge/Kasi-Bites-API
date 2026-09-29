@@ -115,7 +115,7 @@ export default function Users() {
         columns={columns}
         data={data?.data || []}
         keyExtractor={(user) => user.id}
-        onRowClick={(user) => navigate(`/admin/users/${user.id}`)}
+        onRowClick={(user) => navigate(`/admin/platform/users/${user.id}`)}
         isLoading={isLoading}
         emptyMessage="No users found"
       />

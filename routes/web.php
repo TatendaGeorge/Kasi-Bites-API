@@ -2,11 +2,13 @@
 
 use Illuminate\Support\Facades\Route;
 
+// Kasi Bites Admin SPA - the whole app (landing page, auth, store
+// management) is a single React app; React Router handles the
+// public "/" landing route as well as everything under "/admin".
 Route::get('/', function () {
-    return view('welcome');
+    return view('admin');
 });
 
-// Admin dashboard SPA - all /admin routes go to the React app
 Route::get('/admin/{any?}', function () {
     return view('admin');
 })->where('any', '.*');

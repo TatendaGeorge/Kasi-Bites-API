@@ -8,7 +8,9 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, phone: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -38,9 +40,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const response = await authApi.getUser();
           const userData = response.user;
-          if (!userData.is_admin) {
-            throw new Error('Not an admin');
-          }
           setUser(userData);
           localStorage.setItem('admin_user', JSON.stringify(userData));
         } catch {
@@ -63,9 +62,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     const response = await authApi.login(email, password);
 
-    if (!response.user.is_admin) {
-      throw new Error('Access denied. Admin privileges required.');
-    }
+    justLoggedIn.current = true;
+    localStorage.setItem('admin_token', response.token);
+    localStorage.setItem('admin_user', JSON.stringify(response.user));
+    setToken(response.token);
+    setUser(response.user);
+  };
+
+  const register = async (name: string, email: string, phone: string, password: string) => {
+    const response = await authApi.register(name, email, phone, password);
 
     justLoggedIn.current = true;
     localStorage.setItem('admin_token', response.token);
@@ -86,6 +91,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const refreshUser = async () => {
+    const response = await authApi.getUser();
+    setUser(response.user);
+    localStorage.setItem('admin_user', JSON.stringify(response.user));
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -94,7 +105,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         isAuthenticated: !!user && !!token,
         login,
+        register,
         logout,
+        refreshUser,
       }}
     >
       {children}
