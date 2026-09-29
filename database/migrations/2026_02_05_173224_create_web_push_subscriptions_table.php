@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Guards against a deploy that partially created this table before
+        // the MySQL key-length fix below was applied.
+        Schema::dropIfExists('web_push_subscriptions');
+
         Schema::create('web_push_subscriptions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->cascadeOnDelete();
