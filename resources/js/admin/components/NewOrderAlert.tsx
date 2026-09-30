@@ -290,7 +290,7 @@ export default function NewOrderAlert({
                   label={order.order_type === 'collection' ? 'Customer' : 'Delivery'}
                   showLink={true}
                   showRoute={order.order_type !== 'collection'}
-                  storeLabel="Kasi Bites"
+                  storeLabel="Shisa"
                 />
               </div>
             </div>

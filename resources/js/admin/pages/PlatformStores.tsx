@@ -99,7 +99,7 @@ export default function PlatformStores() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Stores</h1>
-        <p className="text-gray-500 mt-1">Approve and oversee every store on Kasi Bites</p>
+        <p className="text-gray-500 mt-1">Approve and oversee every store on Shisa</p>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm p-4 flex flex-col sm:flex-row gap-4">

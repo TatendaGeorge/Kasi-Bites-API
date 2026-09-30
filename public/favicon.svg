@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 64 64" role="img" aria-label="Shisa">
+  <rect width="64" height="64" rx="14" fill="#FF5A1F" />
+  <g transform="translate(32 34) scale(1.35) translate(-32 -26)">
+    <path fill="#FFFFFF" d="M32 11.5C36.5 17.5 42.5 21 42.5 29.5C42.5 35.6 37.8 40 32 40C26.2 40 21.5 35.6 21.5 29.8C21.5 25 24.5 22.2 26.8 19.6C27.3 23.4 28.8 25.3 30.6 25.9C29.9 20.8 30.4 15.9 32 11.5Z" />
+    <path fill="#FF5A1F" d="M32 27.5C34.7 30.2 36.3 31.9 36.3 34.4C36.3 36.7 34.4 38.2 32 38.2C29.6 38.2 27.7 36.7 27.7 34.4C27.7 32.2 29.6 30 32 27.5Z" />
+  </g>
+</svg>

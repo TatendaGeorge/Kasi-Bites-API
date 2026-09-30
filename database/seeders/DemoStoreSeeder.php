@@ -16,9 +16,9 @@ class DemoStoreSeeder extends Seeder
     public function run(): void
     {
         $owner = User::firstOrCreate(
-            ['email' => 'demo-owner@kasibites.test'],
+            ['email' => 'demo-owner@shisa.test'],
             [
-                'name' => 'Kasi Bites Demo Owner',
+                'name' => 'Thandi Mokoena',
                 'password' => Hash::make(str()->random(32)),
                 'is_admin' => false,
             ]
@@ -27,11 +27,11 @@ class DemoStoreSeeder extends Seeder
         Store::firstOrCreate(
             ['owner_id' => $owner->id],
             [
-                'name' => 'Kasi Bites',
-                'description' => 'Our signature fries, combos, and drinks.',
+                'name' => "Mam' Thandi's Kotas",
+                'description' => 'Our signature kotas, combos, and drinks.',
                 'address' => 'Mthatha, Eastern Cape',
                 'phone' => '+27600000000',
-                'email' => 'demo-owner@kasibites.test',
+                'email' => 'demo-owner@shisa.test',
                 'latitude' => -33.011664,
                 'longitude' => 27.866664,
                 'delivery_fee' => 30.00,

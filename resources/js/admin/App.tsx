@@ -63,7 +63,7 @@ function RequireNoStore({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-/** Platform oversight routes: Kasi Bites staff only. */
+/** Platform oversight routes: Shisa staff only. */
 function RequirePlatformAdmin({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
 

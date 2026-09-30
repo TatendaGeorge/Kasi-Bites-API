@@ -305,7 +305,7 @@ export default function OrderDetail() {
                   height="280px"
                   label={orderData.order_type === 'collection' ? 'Customer' : 'Delivery'}
                   showRoute={orderData.order_type !== 'collection'}
-                  storeLabel="Kasi Bites"
+                  storeLabel="Shisa"
                 />
               </div>
             </div>

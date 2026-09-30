@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+@import './shisa/shisa-tokens.css';
+@import './shisa/shisa.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
@@ -8,6 +10,30 @@
 @source '../**/*.tsx';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: Lato, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
+    --font-display: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+
+    /* Re-tint Tailwind's stock orange scale to the Shisa brand hue, and warm the
+       gray scale toward Shisa's ink/surface palette — every existing bg-orange-500,
+       text-gray-500 etc. across the admin app picks this up automatically. */
+    --color-orange-50: #fff1eb;
+    --color-orange-100: #ffe0d1;
+    --color-orange-200: #ffc5a8;
+    --color-orange-300: #ffa575;
+    --color-orange-400: #ff7a42;
+    --color-orange-500: #d63f0b;
+    --color-orange-600: #b8360a;
+    --color-orange-700: #8f2a08;
+
+    --color-gray-50: #f4f5f8;
+    --color-gray-100: #ecedf1;
+    --color-gray-200: #e6e8ee;
+    --color-gray-300: #d3d5dc;
+    --color-gray-400: #a6a9b2;
+    --color-gray-500: #8a8d96;
+    --color-gray-600: #61646e;
+    --color-gray-700: #4a4c54;
+    --color-gray-800: #303239;
+    --color-gray-900: #1b1b1f;
 }

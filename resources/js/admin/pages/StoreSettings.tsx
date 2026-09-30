@@ -156,7 +156,7 @@ export default function StoreSettings() {
 
       {store?.data && !store.data.is_active && (
         <div className="p-4 bg-amber-50 text-amber-800 rounded-lg">
-          Your store is pending approval from the Kasi Bites team. Customers won't see it until it's approved.
+          Your store is pending approval from the Shisa team. Customers won't see it until it's approved.
         </div>
       )}
 
@@ -226,7 +226,7 @@ export default function StoreSettings() {
                 type="text"
                 value={formData.name}
                 onChange={(e) => handleChange('name', e.target.value)}
-                placeholder="e.g., Kasi Bites"
+                placeholder="e.g., Shisa Kotas"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
@@ -250,7 +250,7 @@ export default function StoreSettings() {
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleChange('email', e.target.value)}
-                placeholder="e.g., hello@kasibites.co.za"
+                placeholder="e.g., hello@shisa.co.za"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>

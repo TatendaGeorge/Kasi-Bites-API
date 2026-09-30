@@ -3,6 +3,7 @@ import { LayoutDashboard, ShoppingBag, Users, Package, X, BarChart3, Store, Chev
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useStore } from '../hooks/useStore';
+import { Logo } from './shisa';
 
 const mainNavigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard, exact: true },
@@ -71,7 +72,7 @@ export default function Sidebar() {
         }`}
       >
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-800">
-          <h1 className="text-xl font-bold text-white">Kasi Bites</h1>
+          <Logo variant="lockup" size={28} reversed />
           <button
             className="lg:hidden text-gray-400 hover:text-white"
             onClick={() => setMobileOpen(false)}
@@ -152,7 +153,7 @@ export default function Sidebar() {
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Platform section (Kasi Bites staff only) */}
+          {/* Platform section (Shisa staff only) */}
           {user?.is_admin && (
             <div className="pb-2 border-t border-gray-800 pt-4">
               <p className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-2">

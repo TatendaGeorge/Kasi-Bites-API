@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Package, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { Logo, TextField, Button } from '../components/shisa';
 
 export default function Register() {
   const { register } = useAuth();
@@ -33,102 +34,73 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--bg)' }}>
       <div className="max-w-md w-full">
-        <div className="bg-white rounded-lg shadow-lg p-8">
+        <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-card)', padding: 32 }}>
           <div className="flex justify-center mb-6">
-            <div className="bg-gray-900 p-3 rounded-lg">
-              <Package className="h-8 w-8 text-orange-500" />
-            </div>
+            <Logo variant="mark" size={48} />
           </div>
 
-          <h1 className="text-2xl font-bold text-center text-gray-900 mb-2">
+          <h1 className="text-center mb-2" style={{ font: '600 24px/30px var(--font-display)', color: 'var(--ink)' }}>
             Create your store owner account
           </h1>
-          <p className="text-center text-gray-500 mb-8">
+          <p className="text-center mb-8" style={{ color: 'var(--ink-muted)' }}>
             Next you'll set up your store's profile.
           </p>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
-              <AlertCircle className="h-5 w-5 flex-shrink-0" />
-              <p className="text-sm">{error}</p>
+            <div
+              className="mb-6 flex items-center gap-3"
+              style={{ padding: 16, borderRadius: 'var(--radius-md)', background: 'var(--brand-soft)', border: '1px solid var(--danger)' }}
+            >
+              <AlertCircle className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--danger)' }} />
+              <p className="text-sm" style={{ color: 'var(--danger)' }}>
+                {error}
+              </p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                Full name
-              </label>
-              <input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                placeholder="Jane Doe"
-              />
-            </div>
+            <TextField label="Full name" id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Jane Doe" />
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email address
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                placeholder="you@example.com"
-              />
-            </div>
+            <TextField
+              label="Email address"
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="you@example.com"
+            />
 
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                Phone number
-              </label>
-              <input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                placeholder="082 123 4567"
-              />
-            </div>
+            <TextField
+              label="Phone number"
+              id="phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="082 123 4567"
+            />
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={8}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                placeholder="At least 8 characters"
-              />
-            </div>
+            <TextField
+              label="Password"
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={8}
+              placeholder="At least 8 characters"
+            />
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-gray-900 text-white py-2.5 px-4 rounded-lg font-medium hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isLoading ? 'Creating account...' : 'Continue'}
-            </button>
+            <Button type="submit" disabled={isLoading} block>
+              {isLoading ? 'Creating account…' : 'Continue'}
+            </Button>
           </form>
 
-          <p className="text-center text-sm text-gray-500 mt-6">
+          <p className="text-center text-sm mt-6" style={{ color: 'var(--ink-muted)' }}>
             Already have an account?{' '}
-            <Link to="/admin/login" className="font-medium text-gray-900 hover:underline">
+            <Link to="/admin/login" className="sh-link">
               Log in
             </Link>
           </p>
